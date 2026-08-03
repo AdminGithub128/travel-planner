@@ -297,9 +297,25 @@ async function loadPois() {
 function fillCoords(p) {
   const f = $('#addForm');
   if (!f) return;
-  f.lat.value = p.lat;
-  f.lng.value = p.lng;
+  f.lat.value = p.lat || '';
+  f.lng.value = p.lng || '';
   if (p.type && f.type.querySelector('option[value="' + p.type + '"]')) f.type.value = p.type;
+}
+
+// 模糊匹配分数：名称完全匹配 > 开头匹配 > 包含 > 城市匹配
+function matchScore(poi, query) {
+  const q = query.toLowerCase();
+  const name = poi.name.toLowerCase();
+  const city = poi.city.toLowerCase();
+  if (name === q) return 100;
+  if (name.startsWith(q)) return 80;
+  if (name.includes(q)) return 60;
+  if (city.includes(q)) return 30;
+  // 逐字匹配（输入"大三巴"能匹配"大三巴牌坊"）
+  let chars = 0;
+  for (const c of q) { if (name.includes(c)) chars++; }
+  if (chars >= q.length && q.length >= 2) return 20 + chars;
+  return 0;
 }
 
 function onPlaceInput() {
@@ -307,24 +323,65 @@ function onPlaceInput() {
   const box = $('#poiSuggestions');
   const v = inp.value.trim();
   if (!v) { box.style.display = 'none'; return; }
-  const matches = POIS.filter(p => p.name.includes(v) || p.city.includes(v)).slice(0, 8);
-  if (!matches.length) { box.style.display = 'none'; return; }
-  box.innerHTML = matches.map((p, i) =>
-    '<li data-i="' + i + '"><span class="poi-name">' + p.name + '</span>' +
-    '<span class="poi-city">' + p.city + ' · ' + (p.type || '') + '</span>' +
-    '<span class="poi-coord">' + p.lat.toFixed(4) + ', ' + p.lng.toFixed(4) + '</span></li>'
+
+  // 打分排序取前 8 条
+  const scored = POIS
+    .map(p => ({ p, s: matchScore(p, v) }))
+    .filter(x => x.s > 0)
+    .sort((a, b) => b.s - a.s)
+    .slice(0, 8)
+    .map(x => x.p);
+
+  // 精确匹配自动填充经纬度
+  const exact = POIS.find(p => p.name === v);
+  if (exact) fillCoords(exact);
+
+  // 构建下拉 HTML
+  let html = scored.map((p, i) =>
+    '<li data-i="' + i + '">' +
+      '<div class="poi-left">' +
+        '<div class="poi-name">' + p.name + '</div>' +
+        '<div class="poi-sub">' + p.city + '</div>' +
+      '</div>' +
+      '<div class="poi-right">' +
+        '<span class="poi-type ' + (p.type || '其他') + '">' + (p.type || '') + '</span>' +
+        '<span class="poi-coord">' + p.lat.toFixed(4) + ', ' + p.lng.toFixed(4) + '</span>' +
+      '</div>' +
+    '</li>'
   ).join('');
-  box._matches = matches;
-  box.style.display = 'block';
-  const exact = matches.find(p => p.name === v);
-  if (exact) fillCoords(exact); // 完全匹配自动填充
+
+  // 如果没有匹配到，显示"使用输入内容"回退选项
+  if (!scored.length || (scored.length === 1 && scored[0].name !== v)) {
+    html += '<li class="poi-fallback" data-i="-1">' +
+      '<div class="poi-left">' +
+        '<div class="poi-name">使用「' + v + '」</div>' +
+        '<div class="poi-sub">需手动填写坐标</div>' +
+      '</div>' +
+      '<div class="poi-right">' +
+        '<span class="poi-type 其他">手动</span>' +
+      '</div>' +
+    '</li>';
+  }
+
+  box.innerHTML = html;
+  box._matches = scored;
+  box.style.display = html ? 'block' : 'none';
 }
 
 function selectPoi(i) {
   const box = $('#poiSuggestions');
+  const inp = $('#placeInput');
+
+  if (i === -1) {
+    // 回退：以用户输入为准，清空坐标让用户手动填
+    fillCoords({ lat: '', lng: '', type: '' });
+    box.style.display = 'none';
+    return;
+  }
+
   const p = box._matches && box._matches[i];
-  if (!p) return;
-  $('#placeInput').value = p.name;
+  if (!p) { box.style.display = 'none'; return; }
+  inp.value = p.name;
   fillCoords(p);
   box.style.display = 'none';
 }
