@@ -62,7 +62,11 @@ const server = http.createServer((req, res) => {
     const ext = path.extname(filePath);
     fs.readFile(filePath, (err, data) => {
       if (err) { res.writeHead(404); return res.end('not found'); }
-      res.writeHead(200, { 'Content-Type': (MIME[ext] || 'text/plain') + '; charset=utf-8' });
+      const headers = {
+        'Content-Type': (MIME[ext] || 'text/plain') + '; charset=utf-8',
+        'Cache-Control': 'no-cache, must-revalidate'
+      };
+      res.writeHead(200, headers);
       res.end(data);
     });
     return;
