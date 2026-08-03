@@ -63,6 +63,8 @@ async function refresh() {
 // ---------------- 行程条目 ----------------
 async function addItem(e) {
   e.preventDefault();
+  const btn = e.target.querySelector('button[type="submit"]');
+  if (btn) { btn.disabled = true; btn.textContent = '添加中…'; }
   const f = e.target;
   const item = {
     date: f.date.value,
@@ -75,12 +77,19 @@ async function addItem(e) {
     creator: f.creator.value || '我',
     status: 'proposed'
   };
-  await fetch('/api/rooms/' + state.roomId + '/items', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(item)
-  }).then(r => r.json());
-  f.reset();
-  f.date.value = item.date; f.time.value = '10:00';
-  await refresh();
+  try {
+    const resp = await fetch('/api/rooms/' + state.roomId + '/items', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(item)
+    });
+    if (!resp.ok) throw new Error('服务器返回 ' + resp.status);
+    f.reset();
+    f.date.value = item.date; f.time.value = '10:00';
+    await refresh();
+  } catch (err) {
+    alert('添加失败：' + err.message + '\n\n请确认服务器已启动（端口 3000）。');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '添加'; }
+  }
 }
 
 async function deleteItem(id) {
