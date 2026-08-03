@@ -279,7 +279,7 @@ function renderReview() {
         '<div class="review-actions">' +
           '<button class="b-keep" onclick="setStatus(\'' + it.id + '\',\'kept\')">保留</button>' +
           '<button class="b-merge" onclick="mergeItem(\'' + it.id + '\')">合并</button>' +
-          '<button class="b-drop" onclick="setStatus(\'' + it.id + '\',\'dropped\')">删除</button>' +
+          '<button class="b-drop" onclick="deleteItem(\'' + it.id + '\')">删除</button>' +
         '</div></div></div>';
     });
     html += '</div>';
