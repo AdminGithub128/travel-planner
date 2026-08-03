@@ -151,8 +151,8 @@ function amapNav(lat, lng, place) {
 function switchTab(tab) {
   state.activeTab = tab;
   state.navOptimized = null;
-  $$('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
-  $$('.panel').forEach(p => p.classList.toggle('active', p.id === tab));
+  $$('.tab').forEach(t => t.classList[t.dataset.tab === tab ? 'add' : 'remove']('active'));
+  $$('.panel').forEach(p => p.classList[p.id === tab ? 'add' : 'remove']('active'));
   render();
 }
 
