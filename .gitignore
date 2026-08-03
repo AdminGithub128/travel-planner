@@ -1,0 +1,7 @@
+# 运行时生成的房间数据（由 seed.json 自举，勿入库）
+data/rooms.json
+
+# 依赖与本地产物
+node_modules/
+dist/
+*.log

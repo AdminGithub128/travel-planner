@@ -1,0 +1,16 @@
+# Render 部署配置（免费档即可）
+# 部署后：macau-2026 房间会从 seed.json 自动生成；多人打开同一 #房间号 即可协作。
+services:
+  - type: web
+    name: travel-planner
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: DATA_DIR
+        value: /app/data
+# 说明：免费档文件系统会在「重新部署」时重置（重启不丢）。
+# 若需数据永久保留，可在 Render 控制台为该服务挂载一块 Disk 并设为 /app/data。

@@ -1,0 +1,10 @@
+{
+  "name": "travel-planner",
+  "version": "0.1.0",
+  "description": "澳门·珠海·广州 6日游 攻略协作 MVP（房间协作 + 自动导航 + 合并审阅）",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "license": "MIT"
+}
