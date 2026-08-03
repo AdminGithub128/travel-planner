@@ -1,0 +1,16 @@
+[Unit]
+Description=Travel Planner (Node) - 旅游攻略协作应用
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/travel-planner
+Environment=PORT=3000
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+RestartSec=5
+# 日志走 journalctl：journalctl -u travel-planner -f
+
+[Install]
+WantedBy=multi-user.target
