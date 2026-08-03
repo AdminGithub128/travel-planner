@@ -54,25 +54,28 @@ const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://localhost');
   const p = url.pathname;
 
-  // ---------- 地理编码代理（Nominatim，免 API Key）----------
+  // ---------- 地理编码代理（Nominatim，原生 https 绕过代理）----------
   if (req.method === 'GET' && p === '/api/geocode') {
     const q = url.searchParams.get('q');
     if (!q) { res.writeHead(400); return res.end(JSON.stringify({ error: 'Missing q' })); }
-    (async () => {
-      try {
-        const geoResp = await fetch(
-          'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(q) +
-          '&format=json&limit=5&accept-language=zh',
-          { headers: { 'User-Agent': 'TravelPlanner/1.0.0' } }
-        );
-        const data = await geoResp.json();
+    const https = require('https');
+    const tgt = new URL('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(q) + '&format=json&limit=5&accept-language=zh');
+    const geoReq = https.get(tgt, { headers: { 'User-Agent': 'TravelPlanner/1.0.0' } }, (geoRes) => {
+      let body = '';
+      geoRes.on('data', c => body += c);
+      geoRes.on('end', () => {
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-        res.end(JSON.stringify(data));
-      } catch (e) {
-        res.writeHead(502);
-        res.end(JSON.stringify({ error: 'geocoding failed: ' + e.message }));
-      }
-    })();
+        res.end(body);
+      });
+    });
+    geoReq.on('error', (e) => {
+      res.writeHead(502);
+      res.end(JSON.stringify({ error: 'geocoding failed: ' + e.message }));
+    });
+    geoReq.setTimeout(8000, () => {
+      geoReq.destroy();
+      if (!res.writableEnded) { res.writeHead(504); res.end(JSON.stringify({ error: 'geocoding timeout' })); }
+    });
     return;
   }
 

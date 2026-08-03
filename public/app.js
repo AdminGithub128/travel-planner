@@ -548,7 +548,8 @@ async function loadPois() {
 
 async function geocodeNominatim(query) {
   try {
-    const resp = await fetch('/api/geocode?q=' + encodeURIComponent(query));
+    const resp = await fetch('https://nominatim.openstreetmap.org/search?q=' +
+      encodeURIComponent(query) + '&format=json&limit=5&accept-language=zh');
     if (!resp.ok) return [];
     const data = await resp.json();
     return data.slice(0, 5).map(d => ({
