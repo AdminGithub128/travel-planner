@@ -147,6 +147,23 @@ async function addItem(e) {
     creator: f.creator.value.trim() || getNickname() || '匿名',
     status: 'proposed'
   };
+
+  // ==== 时间冲突检测 ====
+  if (item.time) {
+    const conflicts = state.room.items.filter(i =>
+      i.date === item.date && i.time === item.time &&
+      i.place !== item.place && i.status !== 'dropped'
+    );
+    if (conflicts.length > 0) {
+      if (btn) { btn.disabled = false; btn.textContent = '添加'; }
+      const names = conflicts.map(c => '• ' + c.place + '（' + (c.creator || '?') + '）').join('\n');
+      if (!confirm('⚠️ 时间冲突提醒\n\n' + item.date + ' ' + item.time + ' 已有：\n' + names + '\n\n是否仍要添加？')) {
+        return;
+      }
+      if (btn) { btn.disabled = true; btn.textContent = '添加中…'; }
+    }
+  }
+
   try {
     const resp = await fetch('/api/rooms/' + state.roomId + '/items', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(item)
@@ -319,6 +336,110 @@ function renderNav() {
   }
   html += '</div>';
   $('#navResult').innerHTML = html;
+
+  // ==== Canvas 路线地图 ====
+  drawNavMap(list, totalKm);
+}
+
+function drawNavMap(list, totalKm) {
+  const canvas = $('#navMap');
+  if (!canvas) return;
+  const validPts = list.filter(p => p.lat && p.lng);
+  if (validPts.length < 2) { canvas.style.display = 'none'; return; }
+  canvas.style.display = 'block';
+
+  const container = canvas.parentElement;
+  const W = canvas.width = Math.min(container.clientWidth - 24, 600);
+  const H = canvas.height = 220;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const lats = validPts.map(p => p.lat);
+  const lngs = validPts.map(p => p.lng);
+  const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+  const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+  const latPad = (maxLat - minLat) * 0.15 || 0.005;
+  const lngPad = (maxLng - minLng) * 0.15 || 0.005;
+
+  const pad = 35;
+  const toX = lng => pad + (lng - (minLng - lngPad)) / ((maxLng + lngPad) - (minLng - lngPad)) * (W - pad * 2);
+  const toY = lat => H - pad - (lat - (minLat - latPad)) / ((maxLat + latPad) - (minLat - latPad)) * (H - pad * 2);
+
+  // 背景
+  ctx.fillStyle = '#fafbfc';
+  ctx.fillRect(0, 0, W, H);
+
+  // 网格
+  ctx.strokeStyle = '#e8ecf0'; ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 4; i++) {
+    const x = pad + i * (W - pad * 2) / 4;
+    ctx.beginPath(); ctx.moveTo(x, pad); ctx.lineTo(x, H - pad); ctx.stroke();
+    const y = pad + i * (H - pad * 2) / 4;
+    ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad, y); ctx.stroke();
+  }
+
+  // 路线连线
+  ctx.strokeStyle = '#F7931E'; ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  validPts.forEach((p, i) => {
+    const x = toX(p.lng), y = toY(p.lat);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // 路线箭头（每段中间）
+  for (let i = 1; i < validPts.length; i++) {
+    const a = validPts[i - 1], b = validPts[i];
+    const x1 = toX(a.lng), y1 = toY(a.lat), x2 = toX(b.lng), y2 = toY(b.lat);
+    const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+    const angle = Math.atan2(y2 - y1, x2 - x1);
+    ctx.save();
+    ctx.translate(mx, my); ctx.rotate(angle);
+    ctx.fillStyle = '#F7931E';
+    ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(-4, -3.5); ctx.lineTo(-4, 3.5); ctx.closePath(); ctx.fill();
+    ctx.restore();
+
+    // 距离标签
+    const d = haversine(a, b);
+    ctx.fillStyle = '#64748b'; ctx.font = '10px -apple-system, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(d.toFixed(1) + 'km', mx + 4, my - 8);
+  }
+
+  // 标注点
+  validPts.forEach((p, i) => {
+    const x = toX(p.lng), y = toY(p.lat);
+
+    // 阴影
+    ctx.fillStyle = 'rgba(0,0,0,0.1)';
+    ctx.beginPath(); ctx.arc(x + 1, y + 2, 9, 0, Math.PI * 2); ctx.fill();
+
+    // 圆点
+    const isHotel = p.type === '住宿';
+    ctx.fillStyle = isHotel ? '#6366f1' : '#FF6B35';
+    ctx.beginPath(); ctx.arc(x, y, 9, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(x, y, 9, 0, Math.PI * 2); ctx.stroke();
+
+    // 编号
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 9px -apple-system, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(i + 1, x, y);
+
+    // 名称标签
+    const label = (p.place || '').slice(0, 5);
+    ctx.fillStyle = '#1e293b'; ctx.font = '10px -apple-system, sans-serif'; ctx.textAlign = 'left';
+    const lx = i % 2 === 0 ? x + 12 : x - 12 - ctx.measureText(label).width;
+    ctx.fillText(label, lx, y - 2);
+  });
+
+  // 图例
+  ctx.fillStyle = '#94a3b8'; ctx.font = '10px -apple-system, sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText('路线总距 ' + totalKm.toFixed(1) + ' km  |  🟠 景点/餐饮  🟣 住宿', pad, 14);
 }
 
 function selectNavDay(d) { state.navDay = d; state.navOptimized = null; renderNav(); }
@@ -326,14 +447,35 @@ function selectNavDay(d) { state.navDay = d; state.navOptimized = null; renderNa
 function optimizeRoute() {
   const items = state.room.items.filter(i => i.date === state.navDay && (i.status === 'kept' || i.status === 'proposed') && i.lat && i.lng);
   if (items.length < 3) { alert('当天点太少，无需优化'); return; }
-  // 最近邻：从最早有坐标的点出发，依次选最近的下一个
-  const rest = items.slice();
-  const ordered = [rest.shift()];
-  while (rest.length) {
-    const last = ordered[ordered.length - 1];
-    let bi = 0, bd = Infinity;
-    rest.forEach((c, i) => { const d = haversine(last, c); if (d < bd) { bd = d; bi = i; } });
-    ordered.push(rest.splice(bi, 1)[0]);
+
+  // 分离酒店（住宿）和其他点
+  const hotels = items.filter(i => i.type === '住宿');
+  const others = items.filter(i => i.type !== '住宿');
+
+  let ordered;
+  if (hotels.length > 0 && others.length >= 2) {
+    // 酒店锚点模式：从酒店出发 → 最近邻遍历所有景点 → 回到酒店（如有第二个酒店）
+    const start = hotels[0];
+    const rest = [...others];
+    ordered = [start];
+    while (rest.length) {
+      const last = ordered[ordered.length - 1];
+      let bi = 0, bd = Infinity;
+      rest.forEach((c, i) => { const d = haversine(last, c); if (d < bd) { bd = d; bi = i; } });
+      ordered.push(rest.splice(bi, 1)[0]);
+    }
+    // 如果有第二个酒店（如次日酒店），作为终点
+    if (hotels.length > 1) ordered.push(hotels[1]);
+  } else {
+    // 无酒店：标准最近邻
+    const rest = items.slice();
+    ordered = [rest.shift()];
+    while (rest.length) {
+      const last = ordered[ordered.length - 1];
+      let bi = 0, bd = Infinity;
+      rest.forEach((c, i) => { const d = haversine(last, c); if (d < bd) { bd = d; bi = i; } });
+      ordered.push(rest.splice(bi, 1)[0]);
+    }
   }
   state.navOptimized = ordered;
   renderNav();
@@ -394,11 +536,28 @@ function renderReview() {
   $('#reviewList').innerHTML = html;
 }
 
-// ---------------- 地点联想（输入即自动填经纬度） ----------------
+// ---------------- 地点联想（本地 POI + 在线地理编码兜底）----------------
 let POIS = [];
+let geocodeQueryId = 0;
+let geocodeTimer = null;
+
 async function loadPois() {
   try { POIS = await fetch('/public/pois.json').then(r => r.ok ? r.json() : []); }
   catch (e) { POIS = []; }
+}
+
+async function geocodeNominatim(query) {
+  try {
+    const resp = await fetch('/api/geocode?q=' + encodeURIComponent(query));
+    if (!resp.ok) return [];
+    const data = await resp.json();
+    return data.slice(0, 5).map(d => ({
+      name: d.display_name.split(',')[0],
+      lat: parseFloat(d.lat),
+      lng: parseFloat(d.lon),
+      type: '其他'
+    }));
+  } catch (e) { return []; }
 }
 
 function fillCoords(p) {
@@ -429,9 +588,9 @@ function onPlaceInput() {
   const inp = $('#placeInput');
   const box = $('#poiSuggestions');
   const v = inp.value.trim();
-  if (!v) { box.style.display = 'none'; return; }
+  if (!v) { box.style.display = 'none'; box._matches = []; box._geoMatches = []; return; }
 
-  // 打分排序取前 8 条
+  // ---- 本地 POI 打分排序 ----
   const scored = POIS
     .map(p => ({ p, s: matchScore(p, v) }))
     .filter(x => x.s > 0)
@@ -439,11 +598,10 @@ function onPlaceInput() {
     .slice(0, 8)
     .map(x => x.p);
 
-  // 精确匹配自动填充经纬度
   const exact = POIS.find(p => p.name === v);
   if (exact) fillCoords(exact);
 
-  // 构建下拉 HTML
+  // ---- 构建下拉 HTML ----
   let html = scored.map((p, i) =>
     '<li data-i="' + i + '">' +
       '<div class="poi-left">' +
@@ -457,22 +615,69 @@ function onPlaceInput() {
     '</li>'
   ).join('');
 
-  // 如果没有匹配到，显示"使用输入内容"回退选项
-  if (!scored.length || (scored.length === 1 && scored[0].name !== v)) {
+  // 本地无结果 → 先显示"在线搜索中"
+  if (!scored.length) {
+    html += '<li class="poi-geo-loading">🌐 正在在线搜索…</li>';
+  }
+  // 有结果但不完全匹配 → 保留手动回退
+  if (!exact && v.length >= 1) {
     html += '<li class="poi-fallback" data-i="-1">' +
-      '<div class="poi-left">' +
-        '<div class="poi-name">使用「' + v + '」</div>' +
-        '<div class="poi-sub">需手动填写坐标</div>' +
-      '</div>' +
-      '<div class="poi-right">' +
-        '<span class="poi-type 其他">手动</span>' +
-      '</div>' +
-    '</li>';
+      '<div class="poi-left"><div class="poi-name">使用「' + v + '」</div>' +
+      '<div class="poi-sub">手动填写坐标</div></div></li>';
   }
 
   box.innerHTML = html;
   box._matches = scored;
-  box.style.display = html ? 'block' : 'none';
+  box._geoMatches = [];
+  box.style.display = 'block';
+
+  // ---- 异步在线地理编码（本地未精确匹配时触发）----
+  if (!exact && v.length >= 2) {
+    clearTimeout(geocodeTimer);
+    geocodeTimer = setTimeout(async () => {
+      const qid = ++geocodeQueryId;
+      const geoResults = await geocodeNominatim(v);
+      if (qid !== geocodeQueryId) return; // 过期查询，丢弃
+
+      const box2 = $('#poiSuggestions');
+      if (!box2 || box2.style.display === 'none') return;
+
+      // 重建 HTML（本地结果 + 在线结果）
+      let newHtml = scored.map((p, i) =>
+        '<li data-i="' + i + '">' +
+          '<div class="poi-left"><div class="poi-name">' + p.name + '</div>' +
+          '<div class="poi-sub">' + p.city + '</div></div>' +
+          '<div class="poi-right"><span class="poi-type ' + (p.type || '其他') + '">' + (p.type || '') + '</span>' +
+          '<span class="poi-coord">' + p.lat.toFixed(4) + ', ' + p.lng.toFixed(4) + '</span></div>' +
+        '</li>'
+      ).join('');
+
+      if (geoResults.length > 0) {
+        newHtml += '<li class="poi-divider">🌐 在线匹配</li>';
+        geoResults.forEach((p, i) => {
+          const idx = -(i + 2); // -2, -3, ...
+          newHtml += '<li class="poi-geo" data-i="' + idx + '">' +
+            '<div class="poi-left"><div class="poi-name">' + p.name + '</div>' +
+            '<div class="poi-sub">经纬度 ' + p.lat.toFixed(4) + ', ' + p.lng.toFixed(4) + '</div></div>' +
+            '<div class="poi-right"><span class="poi-type 其他">在线</span></div></li>';
+        });
+      } else if (!scored.length) {
+        newHtml += '<li class="poi-fallback" data-i="-1">' +
+          '<div class="poi-left"><div class="poi-name">使用「' + v + '」</div>' +
+          '<div class="poi-sub">在线也未匹配到，需手动填写坐标</div></div></li>';
+      }
+
+      if (!exact && v.length >= 1 && geoResults.length > 0) {
+        newHtml += '<li class="poi-fallback" data-i="-1">' +
+          '<div class="poi-left"><div class="poi-name">使用「' + v + '」</div>' +
+          '<div class="poi-sub">以我输入的为准</div></div></li>';
+      }
+
+      box2.innerHTML = newHtml;
+      box2._matches = scored;
+      box2._geoMatches = geoResults;
+    }, 350);
+  }
 }
 
 function selectPoi(i) {
@@ -486,6 +691,19 @@ function selectPoi(i) {
     return;
   }
 
+  // 在线地理编码结果（负下标 -2, -3, ...）
+  if (i < -1 && box._geoMatches) {
+    const geoIdx = -(i + 2);
+    const p = box._geoMatches[geoIdx];
+    if (p) {
+      inp.value = p.name;
+      fillCoords(p);
+      box.style.display = 'none';
+      return;
+    }
+  }
+
+  // 本地 POI 结果
   const p = box._matches && box._matches[i];
   if (!p) { box.style.display = 'none'; return; }
   inp.value = p.name;

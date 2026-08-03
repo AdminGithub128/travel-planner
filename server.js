@@ -54,6 +54,28 @@ const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://localhost');
   const p = url.pathname;
 
+  // ---------- 地理编码代理（Nominatim，免 API Key）----------
+  if (req.method === 'GET' && p === '/api/geocode') {
+    const q = url.searchParams.get('q');
+    if (!q) { res.writeHead(400); return res.end(JSON.stringify({ error: 'Missing q' })); }
+    (async () => {
+      try {
+        const geoResp = await fetch(
+          'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(q) +
+          '&format=json&limit=5&accept-language=zh',
+          { headers: { 'User-Agent': 'TravelPlanner/1.0.0' } }
+        );
+        const data = await geoResp.json();
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify(data));
+      } catch (e) {
+        res.writeHead(502);
+        res.end(JSON.stringify({ error: 'geocoding failed: ' + e.message }));
+      }
+    })();
+    return;
+  }
+
   // ---------- 静态文件 ----------
   if (req.method === 'GET' && (p === '/' || p.startsWith('/public/'))) {
     let filePath = p === '/' ? path.join(PUBLIC_DIR, 'index.html') : path.join(__dirname, p);

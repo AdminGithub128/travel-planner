@@ -408,6 +408,31 @@ main {
   border-color:var(--c-warm); color:var(--c-warm-d);
 }
 
+/* ===== Canvas 路线地图 ===== */
+.nav-map {
+  display: none; width: 100%; border-radius: var(--r-lg);
+  margin-bottom: 12px; box-shadow: var(--shadow-card);
+  border: 1px solid var(--c-light); background: #fafbfc;
+}
+
+/* ===== 地理编码分隔线 & 加载状态 ===== */
+.poi-divider {
+  padding: 6px 12px !important; font-size: 11px !important;
+  color: var(--c-ocean) !important; font-weight: 700 !important;
+  background: linear-gradient(90deg, #ecfeff, #fff) !important;
+  cursor: default !important; border-bottom: 1px solid #e0f2fe !important;
+  pointer-events: none;
+}
+.poi-geo-loading {
+  padding: 10px 12px !important; font-size: 13px !important;
+  color: var(--c-muted) !important; font-style: italic;
+  cursor: default !important; pointer-events: none;
+}
+.poi-geo {
+  background: #fafffe !important;
+}
+.poi-geo:active { background: #ecfdf5 !important; }
+
 /* ===== 空状态 ===== */
 .empty {
   text-align:center; color:var(--c-muted); padding:50px 16px;
