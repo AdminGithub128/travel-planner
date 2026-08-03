@@ -191,10 +191,12 @@ function renderPlan() {
 
 function itemRowHtml(it) {
   return '<div class="item-row">' +
-    '<div class="item-time">' + (it.time || '--:--') + '</div>' +
-    '<div class="item-main">' +
-      '<div class="item-place">' + it.place + ' ' + tagHtml(it.type) + '</div>' +
-      '<div class="item-meta">' + (it.note ? it.note + ' · ' : '') + 'by ' + it.creator + ' ' + statusPill(it.status) + '</div>' +
+    '<div class="item-top">' +
+      '<div class="item-time">' + (it.time || '--:--') + '</div>' +
+      '<div class="item-main">' +
+        '<div class="item-place">' + it.place + ' ' + tagHtml(it.type) + '</div>' +
+        '<div class="item-meta">' + (it.note ? it.note + ' · ' : '') + 'by ' + it.creator + ' ' + statusPill(it.status) + '</div>' +
+      '</div>' +
     '</div>' +
     '<div class="item-btns"><button class="del" onclick="deleteItem(\'' + it.id + '\')">删</button></div>' +
   '</div>';
@@ -226,10 +228,12 @@ function renderNav() {
       html += '<div class="seg"><span>↓ ' + d.toFixed(1) + ' km · 约 ' + Math.round(t) + ' 分钟</span><span class="line"></span></div>';
     }
     html += '<div class="item-row">' +
-      '<div class="item-time">' + (it.time || '--:--') + '</div>' +
-      '<div class="item-main"><div class="item-place">' + it.place + ' ' + tagHtml(it.type) + '</div>' +
-      '<div class="item-meta">' + (it.note || '') + '</div>' +
-      '<a class="nav-link" href="' + amapNav(it.lat, it.lng, it.place) + '" target="_blank">🚗 高德导航</a></div>' +
+      '<div class="item-top">' +
+        '<div class="item-time">' + (it.time || '--:--') + '</div>' +
+        '<div class="item-main"><div class="item-place">' + it.place + ' ' + tagHtml(it.type) + '</div>' +
+        '<div class="item-meta">' + (it.note || '') + '</div>' +
+        '<a class="nav-link" href="' + amapNav(it.lat, it.lng, it.place) + '" target="_blank">🚗 高德导航</a></div>' +
+      '</div>' +
     '</div>';
   });
 
@@ -282,14 +286,16 @@ function renderReview() {
     list.forEach(it => {
       const conflict = conflictIds.has(it.id) ? ' conflict' : '';
       html += '<div class="item-row' + conflict + '">' +
-        '<div class="item-time">' + (it.time || '--:--') + '</div>' +
-        '<div class="item-main"><div class="item-place">' + it.place + ' ' + tagHtml(it.type) + ' ' + statusPill(it.status) + '</div>' +
-        '<div class="item-meta">' + (it.note ? it.note + ' · ' : '') + 'by ' + it.creator + '</div>' +
+        '<div class="item-top">' +
+          '<div class="item-time">' + (it.time || '--:--') + '</div>' +
+          '<div class="item-main"><div class="item-place">' + it.place + ' ' + tagHtml(it.type) + ' ' + statusPill(it.status) + '</div>' +
+          '<div class="item-meta">' + (it.note ? it.note + ' · ' : '') + 'by ' + it.creator + '</div>' +
+        '</div></div>' +
         '<div class="review-actions">' +
           '<button class="b-keep" onclick="setStatus(\'' + it.id + '\',\'kept\')">保留</button>' +
           '<button class="b-merge" onclick="mergeItem(\'' + it.id + '\')">合并</button>' +
           '<button class="b-drop" onclick="deleteItem(\'' + it.id + '\')">删除</button>' +
-        '</div></div></div>';
+        '</div></div>';
     });
     html += '</div>';
   });

@@ -2,55 +2,67 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>旅行攻略协作 · 澳门珠海广州 6日游</title>
   <link rel="stylesheet" href="/public/style.css?v=20260803" />
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">旅行攻略协作</div>
-    <div class="room-box">
-      <span id="roomName" class="room-name">加载中…</span>
-      <span id="roomId" class="room-id"></span>
+    <div class="topbar-row1">
+      <div class="brand">旅行攻略协作</div>
+      <div class="room-box">
+        <span id="roomName" class="room-name">加载中…</span>
+        <span id="roomId" class="room-id"></span>
+      </div>
     </div>
     <div class="room-actions">
       <button onclick="createRoom()">＋新房间</button>
       <button onclick="joinRoom()">加入</button>
-      <button onclick="copyShare()">🔗复制邀请</button>
+      <button onclick="copyShare()">📤 分享</button>
     </div>
   </header>
 
   <nav class="tabs">
-    <button class="tab active" data-tab="plan" onclick="switchTab('plan')">📋 行程</button>
-    <button class="tab" data-tab="nav" onclick="switchTab('nav')">🗺️ 自动导航</button>
-    <button class="tab" data-tab="review" onclick="switchTab('review')">✅ 合并审阅</button>
+    <button class="tab active" data-tab="plan" onclick="switchTab('plan')">
+      <span class="tab-icon">📋</span>行程
+    </button>
+    <button class="tab" data-tab="nav" onclick="switchTab('nav')">
+      <span class="tab-icon">🗺️</span>导航
+    </button>
+    <button class="tab" data-tab="review" onclick="switchTab('review')">
+      <span class="tab-icon">✅</span>审阅
+    </button>
   </nav>
 
   <main>
     <!-- 行程 -->
     <section id="plan" class="panel active">
       <div class="add-form-wrap">
-        <h3>＋ 添加行程</h3>
+        <h3>添加行程</h3>
         <form id="addForm" onsubmit="addItem(event)">
-          <div class="grid">
+          <div class="grid-row">
             <label>日期<input name="date" type="date" required value="2026-08-10" /></label>
             <label>时间<input name="time" type="time" value="10:00" /></label>
-            <label class="place-field">地点
-              <div class="input-wrap">
-                <input id="placeInput" name="place" type="text" required placeholder="如：大三巴牌坊" autocomplete="off" />
-                <ul id="poiSuggestions" class="poi-suggest"></ul>
-              </div>
-            </label>
+          </div>
+          <label class="place-field">地点
+            <div class="input-wrap">
+              <input id="placeInput" name="place" type="text" required placeholder="如：大三巴牌坊" autocomplete="off" />
+              <ul id="poiSuggestions" class="poi-suggest"></ul>
+            </div>
+          </label>
+          <div class="grid-row">
             <label>纬度<input name="lat" type="number" step="any" placeholder="22.1974" /></label>
             <label>经度<input name="lng" type="number" step="any" placeholder="113.5439" /></label>
+          </div>
+          <div class="grid-row">
             <label>类型
               <select name="type">
                 <option>景点</option><option>餐饮</option><option>住宿</option><option>交通</option><option>其他</option>
               </select>
             </label>
             <label>创建人<input name="creator" type="text" placeholder="我 / 队友A" /></label>
-            <label class="full">备注<input name="note" type="text" placeholder="可选" /></label>
           </div>
+          <label>备注<input name="note" type="text" placeholder="可选" /></label>
           <button type="submit">添加</button>
         </form>
       </div>
