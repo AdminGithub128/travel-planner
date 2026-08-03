@@ -10,6 +10,76 @@ const state = {
   navOptimized: null // 智能排序后的预览顺序（不持久化）
 };
 
+// ---------------- 用户昵称 ----------------
+const NICK_KEY = 'travel_nickname';
+
+function getNickname() {
+  return localStorage.getItem(NICK_KEY) || '';
+}
+
+function setNickname(name, silent) {
+  const n = (name || '').trim().slice(0, 10);
+  localStorage.setItem(NICK_KEY, n);
+  refreshUserBadge();
+  if (!silent) {
+    const c = $('#addForm')?.creator;
+    if (c && !c.dataset.manual) c.value = n;
+  }
+}
+
+function refreshUserBadge() {
+  const n = getNickname();
+  const b = $('#userBadge');
+  if (b) b.textContent = n ? '👤 ' + n : '👤 --';
+}
+
+function changeNickname() {
+  const old = getNickname();
+  const n = prompt('修改你的名字（最多 10 字）：', old);
+  if (n === null) return;
+  if (!n.trim()) { alert('名字不能为空'); return; }
+  setNickname(n.trim());
+}
+
+function initNickname() {
+  const nick = getNickname();
+  refreshUserBadge();
+  if (nick) {
+    // 有昵称 → auto-fill 创建人
+    const c = $('#addForm')?.creator;
+    if (c) c.value = nick;
+    return;
+  }
+  // 首次 → 弹窗
+  const overlay = $('#nickOverlay');
+  const input = $('#nickInput');
+  const confirmBtn = $('#nickConfirm');
+  overlay.classList.remove('hidden');
+  input.focus();
+
+  function doConfirm() {
+    const v = input.value.trim();
+    if (!v) { input.focus(); return; }
+    setNickname(v);
+    overlay.classList.add('hidden');
+    // 卸载事件
+    confirmBtn.removeEventListener('click', doConfirm);
+    input.removeEventListener('keydown', onKey);
+  }
+
+  function onKey(e) { if (e.key === 'Enter') doConfirm(); }
+
+  confirmBtn.addEventListener('click', doConfirm);
+  input.addEventListener('keydown', onKey);
+}
+
+// 标记创建人框是否被手动改过
+(function bindCreatorTracking() {
+  const c = $('#addForm')?.creator;
+  if (!c) return;
+  c.addEventListener('input', () => { c.dataset.manual = '1'; });
+})();
+
 // ---------------- 房间 ----------------
 async function ensureRoom() {
   let id = location.hash.slice(1);
@@ -74,7 +144,7 @@ async function addItem(e) {
     lng: parseFloat(f.lng.value) || null,
     type: f.type.value,
     note: f.note.value || '',
-    creator: f.creator.value || '我',
+    creator: f.creator.value.trim() || getNickname() || '匿名',
     status: 'proposed'
   };
   try {
@@ -195,7 +265,11 @@ function itemRowHtml(it) {
       '<div class="item-time">' + (it.time || '--:--') + '</div>' +
       '<div class="item-main">' +
         '<div class="item-place">' + it.place + ' ' + tagHtml(it.type) + '</div>' +
-        '<div class="item-meta">' + (it.note ? it.note + ' · ' : '') + 'by ' + it.creator + ' ' + statusPill(it.status) + '</div>' +
+        '<div class="item-meta">' +
+          (it.note ? '<span class="item-note">' + it.note + '</span>' : '') +
+          '<span class="creator-badge">' + it.creator + '</span>' +
+          statusPill(it.status) +
+        '</div>' +
       '</div>' +
     '</div>' +
     '<div class="item-btns"><button class="del" onclick="deleteItem(\'' + it.id + '\')">删</button></div>' +
@@ -231,7 +305,7 @@ function renderNav() {
       '<div class="item-top">' +
         '<div class="item-time">' + (it.time || '--:--') + '</div>' +
         '<div class="item-main"><div class="item-place">' + it.place + ' ' + tagHtml(it.type) + '</div>' +
-        '<div class="item-meta">' + (it.note || '') + '</div>' +
+        '<div class="item-meta">' + (it.note || '') + '<span class="creator-badge" style="margin-left:4px">' + it.creator + '</span></div>' +
         '<a class="nav-link" href="' + amapNav(it.lat, it.lng, it.place) + '" target="_blank">🚗 高德导航</a></div>' +
       '</div>' +
     '</div>';
@@ -270,7 +344,22 @@ function renderReview() {
   const days = [...new Set(items.map(i => i.date))].sort();
   if (!items.length) { $('#reviewList').innerHTML = '<div class="empty">暂无行程可审阅</div>'; return; }
 
-  // 冲突检测：同日期同时间出现多个不同地点
+  // ===== 贡献统计 =====
+  const byCreator = {};
+  items.forEach(it => {
+    const c = it.creator || '匿名';
+    byCreator[c] = (byCreator[c] || 0) + 1;
+  });
+  const myNick = getNickname();
+  const statHtml = Object.entries(byCreator)
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, count]) =>
+      '<span class="stat-item' + (name === myNick ? ' current' : '') + '">' +
+      '👤 ' + name + ' <span class="stat-count">' + count + '条</span>' +
+      '</span>'
+    ).join('');
+
+  // ===== 冲突检测 =====
   const byKey = {};
   items.forEach(it => { if (it.time) { const k = it.date + '|' + it.time; (byKey[k] = byKey[k] || []).push(it); } });
   const conflictIds = new Set();
@@ -278,7 +367,7 @@ function renderReview() {
     if (arr.length > 1 && new Set(arr.map(x => x.place)).size > 1) arr.forEach(x => conflictIds.add(x.id));
   });
 
-  let html = '';
+  let html = '<div class="review-stats"><h4>📊 贡献统计</h4><div class="stat-list">' + statHtml + '</div></div>';
   days.forEach(day => {
     const list = items.filter(i => i.date === day).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
     if (!list.length) return;
@@ -289,7 +378,10 @@ function renderReview() {
         '<div class="item-top">' +
           '<div class="item-time">' + (it.time || '--:--') + '</div>' +
           '<div class="item-main"><div class="item-place">' + it.place + ' ' + tagHtml(it.type) + ' ' + statusPill(it.status) + '</div>' +
-          '<div class="item-meta">' + (it.note ? it.note + ' · ' : '') + 'by ' + it.creator + '</div>' +
+          '<div class="item-meta">' +
+            (it.note ? '<span class="item-note">' + it.note + '</span>' : '') +
+            '<span class="creator-badge">' + it.creator + '</span>' +
+          '</div>' +
         '</div></div>' +
         '<div class="review-actions">' +
           '<button class="b-keep" onclick="setStatus(\'' + it.id + '\',\'kept\')">保留</button>' +
@@ -412,6 +504,7 @@ setInterval(async () => {
 }, 10000);
 
 // 启动
+initNickname();
 ensureRoom();
 window.addEventListener('hashchange', ensureRoom);
 loadPois();

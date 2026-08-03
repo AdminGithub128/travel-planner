@@ -7,6 +7,20 @@
   <link rel="stylesheet" href="/public/style.css?v=20260803" />
 </head>
 <body>
+  <!-- 首次昵称弹窗 -->
+  <div id="nickOverlay" class="nick-overlay hidden">
+    <div class="nick-modal">
+      <div class="nick-emoji">👋</div>
+      <h3>多人协作·你是谁？</h3>
+      <p>设置你的名字，方便队友看到谁添加/编辑了什么</p>
+      <input id="nickInput" type="text" placeholder="如：小明、小红、妈妈…" maxlength="10" autocomplete="off" />
+      <div class="nick-actions">
+        <button id="nickConfirm" class="btn-primary">确认</button>
+      </div>
+      <div class="nick-hint">💡 以后可在顶部点击名字修改</div>
+    </div>
+  </div>
+
   <header class="topbar">
     <div class="topbar-row1">
       <div class="brand">旅行攻略协作</div>
@@ -19,6 +33,7 @@
       <button onclick="createRoom()">＋新房间</button>
       <button onclick="joinRoom()">加入</button>
       <button onclick="copyShare()">📤 分享</button>
+      <span id="userBadge" class="user-badge" onclick="changeNickname()" title="点击修改名字">👤 --</span>
     </div>
   </header>
 
@@ -60,7 +75,7 @@
                 <option>景点</option><option>餐饮</option><option>住宿</option><option>交通</option><option>其他</option>
               </select>
             </label>
-            <label>创建人<input name="creator" type="text" placeholder="我 / 队友A" /></label>
+            <label>谁在添加<input name="creator" type="text" placeholder="自动填你的昵称" /></label>
           </div>
           <label>备注<input name="note" type="text" placeholder="可选" /></label>
           <button type="submit">添加</button>

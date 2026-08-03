@@ -218,7 +218,10 @@ main {
 .item-place .tag.其他 { background:#f1f5f9; color:#475569; }
 .item-meta {
   font-size:11px; color:var(--c-muted); margin-top:2px;
-  display:flex; align-items:center; gap:4px; flex-wrap:wrap;
+  display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+}
+.item-note {
+  color:var(--c-gray); font-size:11px;
 }
 .item-btns {
   display:flex; gap:6px; width:100%;
@@ -322,6 +325,88 @@ main {
   box-shadow:0 2px 6px rgba(225,29,72,.2);
 }
 .b-drop:active { transform:scale(.96); }
+
+/* ===== 昵称弹窗 ===== */
+.nick-overlay {
+  position:fixed; inset:0; z-index:200;
+  background:rgba(15,23,42,.55); backdrop-filter:blur(4px);
+  display:flex; align-items:center; justify-content:center;
+  animation: fadeIn .2s ease;
+}
+.nick-overlay.hidden { display:none; }
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+.nick-modal {
+  background:#fff; border-radius:20px; padding:28px 24px 20px;
+  width:calc(100vw - 48px); max-width:340px;
+  box-shadow:0 20px 60px rgba(0,0,0,.18);
+  text-align:center; animation: slideUp .3s ease;
+}
+@keyframes slideUp {
+  from { opacity:0; transform:translateY(24px); }
+  to { opacity:1; transform:translateY(0); }
+}
+.nick-emoji { font-size:48px; margin-bottom:8px; }
+.nick-modal h3 { font-size:18px; font-weight:800; margin-bottom:6px; color:var(--c-slate); }
+.nick-modal p { font-size:13px; color:var(--c-muted); margin-bottom:16px; }
+.nick-modal input {
+  width:100%; padding:12px 16px; border:2px solid var(--c-warm);
+  border-radius:12px; font-size:17px; font-weight:700;
+  text-align:center; outline:none; font-family:inherit;
+  transition:var(--transition); background:#fffbeb;
+}
+.nick-modal input:focus { box-shadow:0 0 0 4px rgba(245,158,11,.15); }
+.nick-actions { margin-top:14px; }
+.btn-primary {
+  width:100%; padding:13px; border:none; border-radius:12px; cursor:pointer;
+  background:linear-gradient(135deg, #FF6B35, #F7931E);
+  color:#fff; font-size:16px; font-weight:800;
+  box-shadow:0 4px 14px rgba(245,158,11,.35); transition:var(--transition);
+}
+.btn-primary:active { transform:scale(.97); }
+.nick-hint { font-size:11px; color:var(--c-muted); margin-top:10px; }
+
+/* ===== 用户徽章（顶部栏） ===== */
+.user-badge {
+  display:inline-flex; align-items:center; gap:3px;
+  padding:6px 12px; border-radius:999px; cursor:pointer;
+  background:rgba(255,255,255,.22); color:#fff;
+  font-size:12px; font-weight:700; transition:var(--transition);
+  flex-shrink:0; backdrop-filter:blur(4px);
+  margin-left:auto;
+}
+.user-badge:active { background:rgba(255,255,255,.4); transform:scale(.95); }
+
+/* ===== 创建人标签（行程卡片内） ===== */
+.creator-badge {
+  display:inline-flex; align-items:center; gap:3px;
+  background:#f8fafc; padding:2px 8px; border-radius:999px;
+  font-size:11px; font-weight:600; color:var(--c-gray);
+  border:1px solid var(--c-light);
+}
+.creator-badge::before { content:"👤"; font-size:10px; }
+
+/* ===== 审阅页贡献统计 ===== */
+.review-stats {
+  background:var(--c-card); border-radius:var(--r-lg); padding:14px;
+  margin-bottom:12px; box-shadow:var(--shadow-card); border:1px solid var(--c-light);
+}
+.review-stats h4 {
+  font-size:14px; font-weight:800; margin-bottom:10px; color:var(--c-slate);
+  display:flex; align-items:center; gap:4px;
+}
+.review-stats h4::before { content:"📊"; }
+.review-stats .stat-list { display:flex; flex-wrap:wrap; gap:8px; }
+.review-stats .stat-item {
+  display:inline-flex; align-items:center; gap:4px;
+  padding:6px 12px; border-radius:999px;
+  font-size:12px; font-weight:600;
+  background:#f8fafc; border:1px solid var(--c-light);
+}
+.review-stats .stat-item .stat-count { color:var(--c-warm-d); font-weight:800; }
+.review-stats .stat-item.current {
+  background:linear-gradient(135deg, #fef3c7, #fffbeb);
+  border-color:var(--c-warm); color:var(--c-warm-d);
+}
 
 /* ===== 空状态 ===== */
 .empty {
