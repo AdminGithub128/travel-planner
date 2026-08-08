@@ -8,3 +8,12 @@ dist/
 
 # WorkBuddy 项目内部数据（记忆/配置），不入库
 .workbuddy/
+
+# 密钥与账号文件（含密码，绝不入库）
+.env
+data/users.json
+data/sessions.json
+
+# 版本化构建产物（部署快照，由主文件生成，不重复入库）
+public/*.2026*.js
+public/*.2026*.css
